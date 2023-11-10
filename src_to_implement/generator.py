@@ -1,14 +1,11 @@
-import os.path
+import os
 import json
-import scipy.misc
 import numpy as np
+from skimage.transform import resize, rotate
+from skimage.io import imread
 import matplotlib.pyplot as plt
-from numpy import resize
+import random
 
-
-# In this exercise task you will implement an image generator. Generator objects in python are defined as having a next function.
-# This next function returns the next generated object. In our case it returns the input of a neural network each time it gets called.
-# This input consists of a batch of images and its corresponding labels.
 class ImageGenerator:
     def __init__(self, file_path, label_path, batch_size, image_size, rotation=False, mirroring=False, shuffle=False):
         self.file_path = file_path
@@ -18,112 +15,75 @@ class ImageGenerator:
         self.rotation = rotation
         self.mirroring = mirroring
         self.shuffle = shuffle
+        self.current_index = 0  # Initialize the current index
+        self.current_epoch_num = 0
+        self.class_names = {0: 'airplane', 1: 'automobile', 2: 'bird', 3: 'cat', 4: 'deer',
+                            5: 'dog', 6: 'frog', 7: 'horse', 8: 'ship', 9: 'truck'}
 
-        # Load the label dictionary from the JSON file
-        with open(label_path, 'r') as label_file:
-            self.labels = json.load(label_file)
+        # Load the image filenames
+        self.image_names = sorted(os.listdir(file_path))
 
-        # Get a list of image file names from the provided directory
-        self.image_files = os.listdir(file_path)
+        # Load the labels from the provided json file
+        self.labels = self.load_labels(label_path)
 
-        # Initialize variables for tracking the current batch and epoch
-        self.current_batch_index = 0
-        self.current_epoch_number = 0
+        # Create an array of indices to keep track of image order
+        self.indices = np.arange(len(self.image_names))
 
+        # Shuffle if the shuffle flag is True
+        if shuffle:
+            np.random.shuffle(self.indices)
 
-        self.class_dict = {0: 'airplane', 1: 'automobile', 2: 'bird', 3: 'cat', 4: 'deer', 5: 'dog', 6: 'frog',
-                           7: 'horse', 8: 'ship', 9: 'truck'}
-        #TODO: implement constructor
+    def load_labels(self, label_path):
+        with open(label_path) as f:
+            return json.load(f)
 
     def next(self):
+        batch_images = []
+        batch_labels = []
 
-        # This function creates a batch of images and corresponding labels and returns them.
-        # In this context a "batch" of images just means a bunch, say 10 images that are forwarded at once.
-        # Note that your amount of total data might not be divisible without remainder with the batch_size.
-        # Think about how to handle such cases
-        #TODO: implement next method
-            # Create empty arrays to store images and labels for the current batch
-            batch_images = []
-            batch_labels = []
+        while len(batch_images) < self.batch_size:
+            if self.current_index >= len(self.image_names):
+                self.current_index = 0
+                self.current_epoch_num += 1
+                if self.shuffle:
+                    np.random.shuffle(self.indices)
 
-            # Determine the start and end indices for the current batch
-            start_index = self.current_batch_index * self.batch_size
-            end_index = start_index + self.batch_size
+            idx = self.indices[self.current_index]
+            img_name = self.image_names[idx]
+            img_path = os.path.join(self.file_path, img_name)
 
-            # Loop through the image files to populate the current batch
-            for i in range(start_index, end_index):
-                if i < len(self.image_files):
-                    # Load an image and its label
-                    image_filename = self.image_files[i]
-                    image_path = os.path.join(self.file_path, image_filename)
-                    label = self.labels[image_filename]
+            # Check the file extension and decide the method to read the file
+            if img_path.endswith('.npy'):
+                # It's a NumPy binary file (.npy), use np.load
+                img = np.load(img_path)
+            else:
+                # It's an image file, use imread
+                img = imread(img_path)
 
-                    # Load the image and resize it to the desired size
-                    image = scipy.misc.imread(image_path)
-                    image = resize(image, self.image_size, mode='reflect', anti_aliasing=True)
+            img = resize(img, self.image_size, anti_aliasing=True)
 
-                    # Augmentation: Randomly apply mirroring and rotation
-                    if self.mirroring and np.random.rand() > 0.5:
-                        image = np.fliplr(image)
-                    if self.rotation and np.random.rand() > 0.5:
-                        degrees = np.random.randint(1, 180)
-                        image = scipy.misc.imrotate(image, degrees)
+            if self.mirroring and random.choice([True, False]):
+                img = np.fliplr(img)
+            if self.rotation:
+                img = rotate(img, angle=random.choice([0, 90, 180, 270]), resize=False)
 
-                    # Append the image and label to the batch
-                    batch_images.append(image)
-                    batch_labels.append(label)
+            batch_images.append(img)
+            batch_labels.append(self.labels[str(idx)])  # Ensure the key is a string
+            self.current_index += 1
 
-                else:
-                    # If we've reached the end of the image files, wrap around and shuffle if necessary
-                    self.current_batch_index = 0
-                    self.current_epoch_number += 1
-                    if self.shuffle:
-                        np.random.shuffle(self.image_files)
-
-            # Increment the batch index for the next iteration
-            self.current_batch_index += 1
-
-            # return images, labels
-            return np.array(batch_images), np.array(batch_labels)
-
-
-
-    def augment(self,img):
-        # this function takes a single image as an input and performs a random transformation
-        # (mirroring and/or rotation) on it and outputs the transformed image
-        #TODO: implement augmentation function
-
-        return img
+        return np.array(batch_images), np.array(batch_labels)
 
     def current_epoch(self):
-        # return the current epoch number
-        return self.current_epoch_number
+        return self.current_epoch_num
 
-
-    def class_name(self, x):
-        # This function returns the class name for a specific input
-        #TODO: implement class name function
-        return self.class_dict[x.label]
+    def class_name(self, label):
+        return self.class_names[label]
 
     def show(self):
-        # In order to verify that the generator creates batches as required, this functions calls next to get a
-        # batch of images and labels and visualizes it.
-        #TODO: implement show method
-        # Generate a batch using the next() method
         images, labels = self.next()
-
-        # Create a grid of images with class names as titles
-        num_images = len(images)
-        num_rows = int(np.ceil(num_images / 5))
-        fig, axes = plt.subplots(num_rows, 5, figsize=(15, 3 * num_rows))
-
-        for i in range(num_images):
-            row, col = divmod(i, 5)
-            ax = axes[row, col]
-            ax.imshow(images[i])
-            ax.set_title(self.class_name(labels[i]))
-            ax.axis('off')
-
+        plt.figure(figsize=(10, 10))
+        for i in range(len(images)):
+            plt.subplot(1, self.batch_size, i + 1)
+            plt.imshow(images[i])
+            plt.title(self.class_name(labels[i]))
         plt.show()
-
-

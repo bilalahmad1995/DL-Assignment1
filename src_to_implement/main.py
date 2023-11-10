@@ -1,44 +1,64 @@
 import numpy as np
 import matplotlib.pyplot as plt
-#from generator import ImageGenerator
+import unittest
 from pattern import Checker, Circle, Spectrum
-import pytest
+from generator import ImageGenerator
+from NumpyTests import TestCheckers, TestCircle, TestGen
+
 
 if __name__ == "__main__":
     # Create a Checker object
-    checker_resolution = 400
-    checker_tile_size = 40
+    checker_resolution = 250
+    checker_tile_size = 25
     checker = Checker(checker_resolution, checker_tile_size)
-
-    # Create a Circle object
-    circle_resolution = 400
-    circle_radius = 50
-    circle_position = (200, 200)
-    circle = Circle(circle_resolution, circle_radius, circle_position)
 
     # Call the methods on the specific object you want
     # For example, to draw and show the Checker pattern:
     checker.draw()
     checker.show()
 
-    # Or to draw and show the Circle pattern:
-    circle.draw()
-    circle.show()
 
-    spectrum_resolution = 400
-    spectrum = Spectrum(spectrum_resolution)
-    spectrum.draw()
-    spectrum.show()
+    # Create an instance of Circle
+    circle_instance = Circle(resolution=1024, radius=200, position=(512, 256))
 
-    #file_path = '/exercise_data'
-    #label_path = '/Labels.json'
-    #batch_size = 10
-    #image_size = (32, 32, 3)  # Adjust image size as needed
-    #rotation = True
-    #mirroring = True
-    #shuffle = True
+    # Draw and show the circle pattern
+    circle_instance.draw()
+    circle_instance.show()
 
-   #image_generator = ImageGenerator(file_path, label_path, batch_size, image_size, rotation, mirroring, shuffle)
+    # Create an instance of Spectrum
+    spectrum_instance = Spectrum(resolution=255)
 
-    # Call the show() method to visualize a batch of images
-    #'image_generator.show()'
+    # Draw and show the RGB spectrum
+    spectrum_instance.draw()
+    spectrum_instance.show()
+
+    # The path to the directory containing all images
+    image_directory = 'exercise_data'
+
+    # The path to the JSON file containing the labels
+    label_file = 'Labels.json'  # Adjust the path if necessary
+
+    # Define the desired batch size and image size
+    batch_size = 16  # or any other batch size you want to use
+    image_size = [64, 64, 3]  # [height, width, channels]
+
+    # Create an instance of ImageGenerator with desired parameters
+    image_generator = ImageGenerator(file_path=image_directory,
+                                     label_path=label_file,
+                                     batch_size=batch_size,
+                                     image_size=image_size,
+                                     rotation=True,
+                                     mirroring=True,
+                                     shuffle=True)
+
+    # Call the show() method to display a batch of images
+    image_generator.show()
+    unittest.main()
+
+
+
+
+
+
+
+
