@@ -81,9 +81,13 @@ class ImageGenerator:
 
     def show(self):
         images, labels = self.next()
-        plt.figure(figsize=(10, 10))
+        # Calculate the number of rows and columns to display the images in a grid
+        grid_size = int(np.ceil(np.sqrt(len(images))))
+
+        plt.figure(figsize=(15, 15))
         for i in range(len(images)):
-            plt.subplot(1, self.batch_size, i + 1)
+            plt.subplot(grid_size, grid_size, i + 1)  # Create subplots in a grid
             plt.imshow(images[i])
             plt.title(self.class_name(labels[i]))
+            plt.axis('off')  # Hide the axes
         plt.show()

@@ -64,18 +64,26 @@ class Spectrum:
         self.output = None
 
     def draw(self):
-        # Create a grid of coordinates
+        # Create a grid of normalized coordinates
         x = np.linspace(0, 1, self.resolution)
         y = np.linspace(0, 1, self.resolution)
         xx, yy = np.meshgrid(x, y)
 
-        # Create RGB channels
-        red = xx  # Red intensity varies horizontally
-        green = yy  # Green intensity varies vertically
-        blue = (1 - xx) * (1 - yy)  # Blue intensity varies inversely to red and green
+        # Normalize the corner colors and reshape for broadcasting
+        top_left_color = np.array([[7, 7, 251]]) / 255.0
+        top_right_color = np.array([[248, 4, 6]]) / 255.0
+        bottom_left_color = np.array([[2, 249, 255]]) / 255.0
+        bottom_right_color = np.array([[245, 245, 9]]) / 255.0
 
-        # Combine channels to form an RGB image
-        self.output = np.stack((red, green, blue), axis=-1)
+        # Interpolate between the top two corners for the top gradient
+        top_gradient = np.expand_dims(1 - xx, axis=2) * top_left_color + np.expand_dims(xx, axis=2) * top_right_color
+
+        # Interpolate between the bottom two corners for the bottom gradient
+        bottom_gradient = np.expand_dims(1 - xx, axis=2) * bottom_left_color + np.expand_dims(xx,
+                                                                                              axis=2) * bottom_right_color
+
+        # Interpolate between the top and bottom gradients for the final color
+        self.output = np.expand_dims(1 - yy, axis=2) * top_gradient + np.expand_dims(yy, axis=2) * bottom_gradient
 
         return self.output.copy()
 
